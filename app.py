@@ -1,4 +1,3 @@
-# app.py
 import time
 import openpyxl
 import requests
@@ -7,6 +6,7 @@ from flask import Flask, request, render_template, jsonify
 
 app = Flask(__name__)
 
+# Replace with your actual VirusTotal API key
 API_KEY = 'a5e4da964d2817a50f41832426cf2f7bc9f21725b890362430364768798f8c9c'
 url = 'https://www.virustotal.com/api/v3/domains/'
 headers = {'x-apikey': API_KEY}
@@ -62,4 +62,6 @@ def upload_file():
             return jsonify(results=results)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Use Render's dynamic PORT and bind to 0.0.0.0 for public access
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
