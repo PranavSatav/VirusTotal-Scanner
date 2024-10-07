@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 50%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Upload Your Excel File</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" id="file-input" accept=".xlsx" required>
+        <br><br>
+        <button type="submit">Upload and Check</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('upload-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('file-input');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Show processing message
+            document.getElementById('result').innerHTML = "<p>Processing domains... This may take a few minutes.</p>";
+
+            // Send the file to the server for processing
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            // Display the results
+            let html = '<h2>Results:</h2>';
+            html += '<table><tr><th>Domain</th><th>Score</th><th>Status</th></tr>';
+            data.results.forEach(result => {
+                html += `<tr><td>${result.domain}</td><td>${result.score}</td><td>${result.status}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('result').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
