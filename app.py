@@ -17,6 +17,8 @@ def get_virus_total_data_v3(domain):
     if response.status_code == 200:
         return response.json()
     else:
+        # Log error if there's a problem with the request
+        print(f"Error fetching data for {domain}: {response.status_code}, {response.text}")
         return None
 
 def process_domains(file_path):
@@ -28,6 +30,9 @@ def process_domains(file_path):
     for row in range(2, sheet.max_row + 1):  # Assuming first row is headers
         domain = sheet.cell(row=row, column=1).value
         if domain:
+            # Clean the domain to ensure it's in the correct format (without http:// or https://)
+            domain = domain.replace("https://", "").replace("http://", "").strip()
+
             result = get_virus_total_data_v3(domain)
             if result:
                 malicious = result['data']['attributes']['last_analysis_stats']['malicious']
