@@ -3,38 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domain VirusTotal Scanner</title>
+    <title>Domain Scanner</title>
 </head>
 <body>
-    <h1>Upload Excel File with Domains</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".xlsx" required>
-        <button type="submit">Upload and Scan</button>
+    <h1>VirusTotal Domain Scanner</h1>
+
+    <form id="checkExcelForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="excelFile" accept=".xlsx" required>
+        <button type="button" id="checkExcelButton">Check that Excel</button>
     </form>
 
-    <div id="results">
-        <!-- Results will appear here -->
-    </div>
+    <form id="uploadScanForm" enctype="multipart/form-data">
+        <button type="button" id="uploadScanButton">Upload and Scan</button>
+    </form>
+
+    <div id="domainsList"></div>
+    <div id="scanResults"></div>
 
     <script>
-        // Example of how you could display results in the page
-        const form = document.querySelector('form');
-        const resultsDiv = document.getElementById('results');
+        document.getElementById('checkExcelButton').addEventListener('click', function () {
+            const formData = new FormData(document.getElementById('checkExcelForm'));
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-
-            const response = await fetch('/upload', {
+            fetch('/check_excel', {
                 method: 'POST',
                 body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const domainsList = document.getElementById('domainsList');
+                domainsList.innerHTML = '<h2>Domains Found:</h2><ul>';
+                data.domains.forEach(domain => {
+                    domainsList.innerHTML += `<li>${domain}</li>`;
+                });
+                domainsList.innerHTML += '</ul>';
             });
+        });
 
-            const resultData = await response.json();
-            resultsDiv.innerHTML = '';
-            resultData.results.forEach(result => {
-                const domainInfo = `<p>${result.domain} --> ${result.score} (${result.status})</p>`;
-                resultsDiv.innerHTML += domainInfo;
+        document.getElementById('uploadScanButton').addEventListener('click', function () {
+            const formData = new FormData(document.getElementById('checkExcelForm'));
+
+            fetch('/upload_and_scan', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const scanResults = document.getElementById('scanResults');
+                scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
+                data.results.forEach(result => {
+                    scanResults.innerHTML += `<li>${result.domain}: ${result.score} (${result.status})</li>`;
+                });
+                scanResults.innerHTML += '</ul>';
             });
         });
     </script>
