@@ -21,46 +21,67 @@ def get_virus_total_data_v3(domain):
         print(f"Error fetching data for {domain}: {response.status_code}, {response.text}")
         return None
 
-def process_domains(file_path):
-    """Process each domain and return a list of results."""
+def fetch_domains(file_path):
+    """Extract domains from the Excel file."""
     wb = openpyxl.load_workbook(file_path)
     sheet = wb.active
 
-    results = []
+    domains = []
     for row in range(2, sheet.max_row + 1):  # Assuming first row is headers
         domain = sheet.cell(row=row, column=1).value
         if domain:
-            # Clean the domain to ensure it's in the correct format (without http://, https://, and trailing /)
+            # Clean the domain by removing http/https and any trailing slashes
             domain = domain.replace("https://", "").replace("http://", "").rstrip("/").strip()
+            domains.append(domain)
+    return domains
 
-            result = get_virus_total_data_v3(domain)
-            if result:
-                malicious = result['data']['attributes']['last_analysis_stats']['malicious']
-                total_scans = sum(result['data']['attributes']['last_analysis_stats'].values())
-                score = f"{malicious}/{total_scans}"
-                status = "malicious" if malicious > 0 else "not malicious"
-                results.append({'domain': domain, 'score': score, 'status': status})
-            else:
-                results.append({'domain': domain, 'score': "Error", 'status': "Error"})
+def process_domains(file_path):
+    """Process each domain and return a list of results."""
+    domains = fetch_domains(file_path)
+    results = []
+    for domain in domains:
+        result = get_virus_total_data_v3(domain)
+        if result:
+            malicious = result['data']['attributes']['last_analysis_stats']['malicious']
+            total_scans = sum(result['data']['attributes']['last_analysis_stats'].values())
+            score = f"{malicious}/{total_scans}"
+            status = "malicious" if malicious > 0 else "not malicious"
+            results.append({'domain': domain, 'score': score, 'status': status})
+        else:
+            results.append({'domain': domain, 'score': "Error", 'status': "Error"})
 
-            # Ensure we don't exceed the 4 requests per minute limit
-            if len(results) % 4 == 0:
-                time.sleep(60)  # Wait for 1 minute after every 4 requests
+        # Ensure we don't exceed the 4 requests per minute limit
+        if len(results) % 4 == 0:
+            time.sleep(60)  # Wait for 1 minute after every 4 requests
     return results
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
+@app.route('/check_excel', methods=['POST'])
+def check_excel():
     if request.method == 'POST':
         file = request.files['file']
         if file:
             file_path = "uploaded.xlsx"
             file.save(file_path)
 
-            # Process the uploaded Excel file
+            # Fetch domains from the uploaded Excel file
+            domains = fetch_domains(file_path)
+
+            # Return the domains to the frontend for display
+            return jsonify(domains=domains)
+
+@app.route('/upload_and_scan', methods=['POST'])
+def upload_and_scan():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file:
+            file_path = "uploaded.xlsx"
+            file.save(file_path)
+
+            # Process the uploaded Excel file (fetch domains and scan them)
             results = process_domains(file_path)
 
             # Return the results to the frontend for display
