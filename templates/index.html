@@ -4,24 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Domain Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>VirusTotal Domain Scanner</h1>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-6">VirusTotal Domain Scanner</h1>
 
-    <form id="checkExcelForm" enctype="multipart/form-data">
-        <input type="file" name="file" id="excelFile" accept=".xlsx" required>
-        <button type="button" id="checkExcelButton">Check that Excel</button>
-    </form>
-    <hr><br><br>
-    
-    <form id="uploadScanForm" enctype="multipart/form-data">
-        <button type="button" id="uploadScanButton">Upload and Scan</button>
-    </form>
+        <form id="checkExcelForm" enctype="multipart/form-data" class="mb-4">
+            <div class="flex items-center justify-center mb-4">
+                <input type="file" name="file" id="excelFile" accept=".xlsx" required class="mr-2 bg-gray-800 border border-gray-700 text-white py-2 px-3 rounded">
+                <button type="button" id="checkExcelButton" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Check that Excel</button>
+            </div>
+        </form>
 
-    <div id="domainsList"></div>
-    <div id="scanProgress"></div>
-    <div id="scanResults"></div>
-    <button type="button" id="downloadResultsButton" style="display:none;">Download Results</button>
+        <hr class="my-6 border-gray-700">
+        
+        <form id="uploadScanForm" enctype="multipart/form-data" class="mb-4">
+            <button type="button" id="uploadScanButton" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">Upload and Scan</button>
+        </form>
+
+        <div id="domainsList" class="mb-4"></div>
+        <div id="scanProgress" class="mb-4"></div>
+        <div id="scanResults" class="mb-4"></div>
+        <button type="button" id="downloadResultsButton" style="display:none;" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded">Download Results</button>
+    </div>
 
     <script>
         let scanResultsArray = []; // Array to store scan results
@@ -36,7 +42,7 @@
             .then(response => response.json())
             .then(data => {
                 const domainsList = document.getElementById('domainsList');
-                domainsList.innerHTML = '<h2>Domains Found:</h2><ul>';
+                domainsList.innerHTML = '<h2 class="text-xl font-semibold">Domains Found:</h2><ul class="list-disc list-inside">';
                 data.domains.forEach(domain => {
                     domainsList.innerHTML += `<li>${domain}</li>`;
                 });
@@ -76,7 +82,7 @@
 
                 // Display result
                 const scanResults = document.getElementById('scanResults');
-                scanResults.innerHTML += `<hr><ul>`;
+                scanResults.innerHTML += `<hr><ul class="list-disc list-inside">`;
                 scanResults.innerHTML += `<li>${resultData.domain}: ${resultData.score} (${resultData.status})</li>`;
                 scanResults.innerHTML += '</ul>';
 
