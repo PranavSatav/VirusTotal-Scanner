@@ -12,12 +12,14 @@
         <input type="file" name="file" id="excelFile" accept=".xlsx" required>
         <button type="button" id="checkExcelButton">Check that Excel</button>
     </form>
-<hr><br><br>
+    <hr><br><br>
+    
     <form id="uploadScanForm" enctype="multipart/form-data">
         <button type="button" id="uploadScanButton">Upload and Scan</button>
     </form>
 
     <div id="domainsList"></div>
+    <div id="scanProgress"></div>
     <div id="scanResults"></div>
 
     <script>
@@ -39,23 +41,47 @@
             });
         });
 
-        document.getElementById('uploadScanButton').addEventListener('click', function () {
+        document.getElementById('uploadScanButton').addEventListener('click', async function () {
             const formData = new FormData(document.getElementById('checkExcelForm'));
+            const scanProgress = document.getElementById('scanProgress');
+            scanProgress.innerHTML = ''; // Clear previous progress
 
-            fetch('/upload_and_scan', {
+            // Fetch the domains first
+            const response = await fetch('/check_excel', {
                 method: 'POST',
                 body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                const scanResults = document.getElementById('scanResults');
-                scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
-                // Collect all results
-                data.results.forEach(result => {
-                    scanResults.innerHTML += `<li>${result.domain}: ${result.score} (${result.status})</li>`;
-                });
-                scanResults.innerHTML += '</ul>'; // Closing the results list
             });
+            const data = await response.json();
+            const domains = data.domains;
+
+            // Scan each domain one by one
+            for (let i = 0; i < domains.length; i++) {
+                const domain = domains[i];
+                scanProgress.innerHTML += `<p>Checking ${domain}...</p>`;
+                
+                // Create a new form data object for the individual domain
+                const domainFormData = new FormData();
+                domainFormData.append('domain', domain);
+
+                // Hit the new API for the current domain
+                const resultResponse = await fetch('/scan_domain', {
+                    method: 'POST',
+                    body: domainFormData
+                });
+                const resultData = await resultResponse.json();
+
+                // Display result
+                const scanResults = document.getElementById('scanResults');
+                scanResults.innerHTML += `<hr><ul>`;
+                scanResults.innerHTML += `<li>${resultData.domain}: ${resultData.score} (${resultData.status})</li>`;
+                scanResults.innerHTML += '</ul>';
+
+                // Wait for 20 seconds before the next request
+                if (i < domains.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 20000));
+                }
+            }
+            scanProgress.innerHTML += '<p>All scans completed.</p>';
         });
     </script>
 </body>
