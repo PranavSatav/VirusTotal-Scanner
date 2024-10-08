@@ -12,7 +12,7 @@
         <input type="file" name="file" id="excelFile" accept=".xlsx" required>
         <button type="button" id="checkExcelButton">Check that Excel</button>
     </form>
-<hr><br><br>
+    <hr><br><br>
     <form id="uploadScanForm" enctype="multipart/form-data">
         <button type="button" id="uploadScanButton">Upload and Scan</button>
     </form>
@@ -41,20 +41,17 @@
 
         document.getElementById('uploadScanButton').addEventListener('click', function () {
             const formData = new FormData(document.getElementById('checkExcelForm'));
+            const eventSource = new EventSource('/upload_and_scan');
+            const scanResults = document.getElementById('scanResults');
+            scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
 
-            fetch('/upload_and_scan', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                const scanResults = document.getElementById('scanResults');
-                scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
-                data.results.forEach(result => {
-                    scanResults.innerHTML += `<li>${result.domain}: ${result.score} (${result.status})</li>`;
-                });
-                scanResults.innerHTML += '</ul>';
-            });
+            eventSource.onmessage = function (event) {
+                scanResults.innerHTML += `<li>${event.data}</li>`;
+            };
+
+            eventSource.onerror = function () {
+                eventSource.close();
+            };
         });
     </script>
 </body>
