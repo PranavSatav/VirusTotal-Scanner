@@ -12,7 +12,7 @@
         <input type="file" name="file" id="excelFile" accept=".xlsx" required>
         <button type="button" id="checkExcelButton">Check that Excel</button>
     </form>
-    <hr><br><br>
+<hr><br><br>
     <form id="uploadScanForm" enctype="multipart/form-data">
         <button type="button" id="uploadScanButton">Upload and Scan</button>
     </form>
@@ -41,15 +41,17 @@
 
         document.getElementById('uploadScanButton').addEventListener('click', function () {
             const formData = new FormData(document.getElementById('checkExcelForm'));
+
             const eventSource = new EventSource('/upload_and_scan');
             const scanResults = document.getElementById('scanResults');
-            scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
+            scanResults.innerHTML = '<h2>Scan Progress:</h2><ul>';
 
-            eventSource.onmessage = function (event) {
+            eventSource.onmessage = function(event) {
                 scanResults.innerHTML += `<li>${event.data}</li>`;
             };
 
-            eventSource.onerror = function () {
+            eventSource.onerror = function() {
+                scanResults.innerHTML += '<li>Scan finished or error occurred.</li>';
                 eventSource.close();
             };
         });
