@@ -19,47 +19,11 @@
 
     <div id="domainsList"></div>
     <div id="scanResults"></div>
-    <div id="countdown"></div>
 
     <script>
-        let currentIndex = 0;
-        let domains = [];
-
-        function startCountdown(seconds, callback) {
-            let countdownDiv = document.getElementById('countdown');
-            let interval = setInterval(() => {
-                countdownDiv.innerHTML = `Next scan in ${seconds} seconds...`;
-                seconds--;
-                if (seconds < 0) {
-                    clearInterval(interval);
-                    countdownDiv.innerHTML = '';
-                    callback();
-                }
-            }, 1000);
-        }
-
-        function scanNextDomain() {
-            if (currentIndex >= domains.length) {
-                document.getElementById('scanResults').innerHTML += "<p>All domains scanned!</p>";
-                return;
-            }
-
-            const domain = domains[currentIndex];
-            fetch('/upload_and_scan', {
-                method: 'POST',
-                body: new FormData(document.getElementById('checkExcelForm'))
-            })
-            .then(response => response.json())
-            .then(data => {
-                const scanResults = document.getElementById('scanResults');
-                scanResults.innerHTML += `<p>${domain}: ${data.results[currentIndex].score} (${data.results[currentIndex].status})</p>`;
-                currentIndex++;
-                startCountdown(20, scanNextDomain);  // Delay for 20 seconds before next scan
-            });
-        }
-
         document.getElementById('checkExcelButton').addEventListener('click', function () {
             const formData = new FormData(document.getElementById('checkExcelForm'));
+
             fetch('/check_excel', {
                 method: 'POST',
                 body: formData
@@ -72,13 +36,25 @@
                     domainsList.innerHTML += `<li>${domain}</li>`;
                 });
                 domainsList.innerHTML += '</ul>';
-                domains = data.domains;  // Save the domains list for scanning
             });
         });
 
         document.getElementById('uploadScanButton').addEventListener('click', function () {
-            currentIndex = 0;  // Reset the index
-            scanNextDomain();  // Start scanning the first domain
+            const formData = new FormData(document.getElementById('checkExcelForm'));
+
+            fetch('/upload_and_scan', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const scanResults = document.getElementById('scanResults');
+                scanResults.innerHTML = '<h2>Scan Results:</h2><ul>';
+                data.results.forEach(result => {
+                    scanResults.innerHTML += `<li>${result.domain}: ${result.score} (${result.status})</li>`;
+                });
+                scanResults.innerHTML += '</ul>';
+            });
         });
     </script>
 </body>
