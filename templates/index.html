@@ -26,11 +26,56 @@
         <div id="domainsList" class="mb-4"></div>
         <div id="scanProgress" class="mb-4"></div>
         <div id="scanResults" class="mb-4"></div>
-        <button type="button" id="downloadResultsButton" style="display:none;" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded">Download Results</button>
+
+        <hr class="my-6 border-gray-700">
+        
+        <!-- History Section -->
+        <h2 class="text-xl font-semibold mb-4">Scan History</h2>
+        <div id="historyContainer" class="space-y-4"></div>
     </div>
 
     <script>
         let scanResultsArray = []; // Array to store scan results
+
+        // Function to load scan history from localStorage
+        function loadScanHistory() {
+            const historyContainer = document.getElementById('historyContainer');
+            const historyData = JSON.parse(localStorage.getItem('scanHistory')) || [];
+            historyContainer.innerHTML = ''; // Clear previous history display
+
+            historyData.forEach((historyItem, index) => {
+                const date = new Date(historyItem.timestamp).toLocaleString();
+
+                // Create expandable history item
+                const historyButton = document.createElement('button');
+                historyButton.className = 'bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded w-full text-left';
+                historyButton.innerHTML = `${date} - History (click to expand)`;
+
+                const historyContent = document.createElement('div');
+                historyContent.style.display = 'none'; // Initially hidden
+                historyContent.className = 'bg-gray-800 text-white p-4 mt-2 rounded';
+
+                let domainsList = '<ul class="list-disc list-inside">';
+                historyItem.results.forEach(result => {
+                    domainsList += `<li>${result.domain}: ${result.score} (${result.status})</li>`;
+                });
+                domainsList += '</ul>';
+
+                historyContent.innerHTML = domainsList;
+
+                // Toggle history content on button click
+                historyButton.addEventListener('click', () => {
+                    historyContent.style.display = historyContent.style.display === 'none' ? 'block' : 'none';
+                });
+
+                // Append to the container
+                historyContainer.appendChild(historyButton);
+                historyContainer.appendChild(historyContent);
+            });
+        }
+
+        // Call loadScanHistory on page load
+        loadScanHistory();
 
         document.getElementById('checkExcelButton').addEventListener('click', function () {
             const formData = new FormData(document.getElementById('checkExcelForm'));
@@ -100,36 +145,18 @@
             }
             scanProgress.innerHTML += '<p>All scans completed.</p>';
 
-            // Show download button
-            document.getElementById('downloadResultsButton').style.display = 'block';
+            // Save scan results to localStorage
+            const scanHistory = JSON.parse(localStorage.getItem('scanHistory')) || [];
+            scanHistory.push({
+                timestamp: Date.now(), // Current timestamp
+                results: scanResultsArray
+            });
+            localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+
+            // Reload history after new scan
+            loadScanHistory();
         });
 
-        document.getElementById('downloadResultsButton').addEventListener('click', function () {
-            fetch('/download_results', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ results: scanResultsArray })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.blob();
-                }
-                throw new Error('Network response was not ok.');
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'scan_results.xlsx';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => console.error('Error downloading results:', error));
-        });
     </script>
 </body>
 </html>
