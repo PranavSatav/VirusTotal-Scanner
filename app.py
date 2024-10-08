@@ -30,8 +30,8 @@ def process_domains(file_path):
     for row in range(2, sheet.max_row + 1):  # Assuming first row is headers
         domain = sheet.cell(row=row, column=1).value
         if domain:
-            # Clean the domain to ensure it's in the correct format (without http:// or https://)
-            domain = domain.replace("https://", "").replace("http://", "").strip()
+            # Clean the domain to ensure it's in the correct format (without http://, https://, and trailing /)
+            domain = domain.replace("https://", "").replace("http://", "").rstrip("/").strip()
 
             result = get_virus_total_data_v3(domain)
             if result:
