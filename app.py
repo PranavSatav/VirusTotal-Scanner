@@ -2,7 +2,7 @@ import time
 import openpyxl
 import requests
 import os
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_file
 
 app = Flask(__name__)
 
@@ -27,7 +27,7 @@ def fetch_domains(file_path):
     sheet = wb.active
 
     domains = []
-    for row in range(2, sheet.max_row + 1):  # Assuming first row is headers
+    for row in range(1, sheet.max_row + 1):  # Start from row 1 to include headers
         domain = sheet.cell(row=row, column=1).value
         if domain:
             # Clean the domain by removing http/https and any trailing slashes
@@ -67,6 +67,21 @@ def scan_domain():
                 return jsonify({'domain': domain, 'score': score, 'status': status})
             else:
                 return jsonify({'domain': domain, 'score': "Error", 'status': "Error"})
+
+@app.route('/download_results', methods=['POST'])
+def download_results():
+    if request.method == 'POST':
+        results = request.json.get('results', [])
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(['Domain Name', 'Scan Result'])  # Header row
+
+        for result in results:
+            ws.append([result['domain'], result['score'] + " (" + result['status'] + ")"])
+
+        output_file = "scan_results.xlsx"
+        wb.save(output_file)
+        return send_file(output_file, as_attachment=True)
 
 if __name__ == "__main__":
     # Use Render's dynamic PORT and bind to 0.0.0.0 for public access
