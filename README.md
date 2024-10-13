@@ -27,4 +27,36 @@ python app.py
 5. Select the free tier CPU and hit start/deploy.
 
 ![image](https://github.com/user-attachments/assets/3bcedfa1-3b55-44bd-9801-fc697e281278)
+<hr>
+
+Javascript version - Just download index.html and run in browser haha, so easy no need to do all sorcery in python...and this is how it looks..<hr>
+![image](https://github.com/user-attachments/assets/1aecac92-e83b-4740-95df-62177e7c1801)
+<hr>
+## 🚀 Features of this javascript version, because its cool..
+
+- **File Upload** 📂:  
+  Custom-styled button for uploading Excel or text files containing domains.
+
+- **Domain Processing** 🔍:  
+  Extracts domains from uploaded files and displays them in a list.
+
+- **VirusTotal API Integration** ⚡:  
+  Checks each domain against the VirusTotal API for malicious content.  
+  Displays results indicating whether the domain is "Clean" or "Malicious," along with detection scores.
+
+- **Countdown Timer** ⏳:  
+  Displays a countdown before checking the next domain, only if there are more domains left to check.
+
+- **Scan Results History** 📜:  
+  Saves scan results to local storage with a timestamp for each scan session.  
+  Each history entry can be expanded to view detailed scan results.
+
+- **Download Results** 💾:  
+  Provides a button to download the scan results in JSON format after all domains have been checked.
+
+- **Clear History** ❌:  
+  Allows users to clear the stored scan history from local storage.
+
+- **Responsive Design** 📱:  
+  Utilizes Tailwind CSS for a modern, responsive UI that is visually appealing.
 
