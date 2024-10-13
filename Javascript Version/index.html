@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VirusTotal Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .details {
+            display: none;
+            transition: max-height 0.2s ease-out;
+        }
+        .details.expanded {
+            display: block;
+        }
+        .file-input {
+            display: none; /* Hide the original file input */
+        }
+        .file-label {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #3B82F6; /* Tailwind bg-blue-500 */
+            color: white;
+            border-radius: 0.375rem; /* Tailwind rounded */
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .file-label:hover {
+            background-color: #2563EB; /* Tailwind bg-blue-700 */
+        }
+    </style>
+    <style>
+        .details {
+            display: none;
+            transition: max-height 0.2s ease-out;
+        }
+        .details.expanded {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-8">
+        <h1 class="text-3xl font-bold mb-4">VirusTotal Domain Checker</h1>
+
+        <div class="bg-gray-800 p-4 rounded shadow-md">
+            <label class="block mb-2 text-lg" for="fileInput">Upload Excel or Text file:</label>
+            <input id="fileInput" type="file" accept=".xlsx,.xls,.txt" class="file-input" onchange="handleFileUpload(event)">
+            <label for="fileInput" class="file-label">Choose File</label>
+
+            <div id="domainList" class="bg-gray-700 p-4 rounded mt-4">
+                <h2 class="text-2xl font-semibold">Domains Found:</h2>
+                <ul id="domainsDisplay" class="list-disc pl-6 mt-2"></ul>
+            </div>
+
+            <button id="startAnalyzeBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">Start Analyze</button>
+
+            <div id="scanResults" class="bg-gray-700 p-4 rounded mt-6">
+                <h2 class="text-2xl font-semibold">Scan Results:</h2>
+                <ul id="scanDisplay" class="list-disc pl-6 mt-2"></ul>
+            </div>
+
+            <button id="downloadBtn" class="bg-green-500 text-white px-4 py-2 rounded mt-4 hidden">Download Results</button>
+            <button id="clearHistoryBtn" class="bg-red-500 text-white px-4 py-2 rounded mt-4">Clear History</button>
+
+            <div id="history" class="mt-6">
+                <h2 class="text-2xl font-semibold">History:</h2>
+                <ul id="historyDisplay" class="list-disc pl-6 mt-2"></ul>
+            </div>
+
+            <div id="timer" class="mt-4 text-lg"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script>
+        const apiKey = 'a5e4da964d2817a50f41832426cf2f7bc9f21725b890362430364768798f8c9c';
+        const domains = [];
+        const historyKey = 'scanHistory';
+        let scanResults = [];
+
+        // Handle file upload and parse the domains
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileReader = new FileReader();
+                fileReader.onload = async (e) => {
+                    const content = e.target.result;
+                    let domainList = [];
+                    
+                    if (file.name.endsWith('.txt')) {
+                        domainList = content.split(/\r?\n/);
+                    } else {
+                        const workbook = XLSX.read(content, { type: 'binary' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        domainList = XLSX.utils.sheet_to_json(sheet, { header: 1 }).flat();
+                    }
+
+                    processDomains(domainList);
+                };
+
+                if (file.name.endsWith('.txt')) {
+                    fileReader.readAsText(file);
+                } else {
+                    fileReader.readAsBinaryString(file);
+                }
+            }
+        }
+
+        function processDomains(domainList) {
+            domains.length = 0; // Clear previous domains
+            const domainSet = new Set();
+
+            domainList.forEach(domain => {
+                domain = domain.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                if (domain && !domainSet.has(domain)) {
+                    domainSet.add(domain);
+                    domains.push(domain);
+                }
+            });
+
+            displayDomains();
+        }
+
+        function displayDomains() {
+            const domainListElement = document.getElementById('domainsDisplay');
+            domainListElement.innerHTML = '';
+
+            domains.forEach((domain, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${index + 1}. ${domain}`;
+                domainListElement.appendChild(li);
+            });
+        }
+
+        // Handle the VirusTotal API checking
+        document.getElementById('startAnalyzeBtn').addEventListener('click', startAnalyze);
+
+        async function startAnalyze() {
+            const scanDisplay = document.getElementById('scanDisplay');
+            const timerElement = document.getElementById('timer');
+            scanDisplay.innerHTML = '';
+            scanResults = []; // Reset scan results for this session
+
+            for (let i = 0; i < domains.length; i++) {
+                const domain = domains[i];
+                const resultItem = document.createElement('li');
+                resultItem.textContent = `Checking ${domain}...`;
+                scanDisplay.appendChild(resultItem);
+
+                const result = await checkVirusTotalV3(domain);
+                resultItem.textContent = `${domain}: ${result.malicious ? 'Malicious' : 'Clean'} (Detections: ${result.positives}/${result.total})`;
+                scanResults.push({ domain, status: result.malicious ? 'Malicious' : 'Clean', score: `${result.positives}/${result.total}` });
+
+                // Start countdown for next check only if it's not the last domain
+                if (i < domains.length - 1) {
+                    await startCountdown(20, timerElement);
+                }
+            }
+
+            // After scanning all domains, show download button and save history
+            document.getElementById('downloadBtn').classList.remove('hidden');
+            saveHistory();
+        }
+
+        async function checkVirusTotalV3(domain) {
+            const url = `https://www.virustotal.com/api/v3/domains/${domain}`;
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'x-apikey': apiKey
+                    }
+                });
+                const data = await response.json();
+                
+                const lastAnalysisStats = data.data.attributes.last_analysis_stats;
+                const positives = lastAnalysisStats.malicious || 0;
+                const total = lastAnalysisStats.harmless + lastAnalysisStats.malicious + lastAnalysisStats.suspicious + lastAnalysisStats.undetected + lastAnalysisStats.timeout;
+                const malicious = positives > 0;
+                
+                return { malicious, positives, total };
+            } catch (error) {
+                console.error('Error fetching data from VirusTotal:', error);
+                return { malicious: false, positives: 0, total: 0 };
+            }
+        }
+
+        function startCountdown(seconds, element) {
+            return new Promise(resolve => {
+                let remaining = seconds;
+                element.textContent = `Next domain will be checked in ${remaining} seconds...`;
+                
+                const interval = setInterval(() => {
+                    remaining--;
+                    element.textContent = `Next domain will be checked in ${remaining} seconds...`;
+                    if (remaining <= 0) {
+                        clearInterval(interval);
+                        element.textContent = '';
+                        resolve();
+                    }
+                }, 1000);
+            });
+        }
+
+        function saveHistory() {
+            const timestamp = new Date().toLocaleString('en-GB', { timeZone: 'UTC' });
+            const history = JSON.parse(localStorage.getItem(historyKey)) || [];
+            history.push({ timestamp, results: scanResults });
+            localStorage.setItem(historyKey, JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem(historyKey)) || [];
+            const historyDisplay = document.getElementById('historyDisplay');
+            historyDisplay.innerHTML = '';
+
+            history.forEach(entry => {
+                const li = document.createElement('li');
+                li.textContent = `${entry.timestamp} > Click to Expand`;
+                li.className = 'cursor-pointer';
+                li.onclick = () => toggleDetails(entry);
+
+                const details = document.createElement('ul');
+                details.className = 'details pl-6 bg-gray-600 rounded mt-2';
+                entry.results.forEach(result => {
+                    const detailLi = document.createElement('li');
+                    detailLi.textContent = `${result.domain}: ${result.status} (Detections: ${result.score})`;
+                    details.appendChild(detailLi);
+                });
+                li.appendChild(details);
+                historyDisplay.appendChild(li);
+            });
+        }
+
+        function toggleDetails(entry) {
+            const historyDisplay = document.getElementById('historyDisplay');
+            const details = Array.from(historyDisplay.children).find(li => li.textContent.includes(entry.timestamp)).querySelector('.details');
+            details.classList.toggle('expanded');
+        }
+
+        function downloadResults() {
+            const blob = new Blob([JSON.stringify(scanResults)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'scan_results.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Add event listener for download button
+        document.getElementById('downloadBtn').addEventListener('click', downloadResults);
+
+        // Add event listener for clear history button
+        document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+            localStorage.removeItem(historyKey);
+            loadHistory();
+        });
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+</html>
